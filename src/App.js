@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { db, auth } from "./firebase";
 import {
-  collection, doc, setDoc, getDoc, getDocs, onSnapshot, query, orderBy
+  collection, doc, setDoc, onSnapshot
 } from "firebase/firestore";
 import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut
