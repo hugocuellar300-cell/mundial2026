@@ -1,123 +1,122 @@
 import React, { useState, useEffect } from "react";
 import { db, auth } from "./firebase";
 import {
-  collection, doc, setDoc, getDoc, getDocs, onSnapshot, query, orderBy
+  collection, doc, setDoc, onSnapshot
 } from "firebase/firestore";
 import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut
 } from "firebase/auth";
 import "./App.css";
 
-// ─── CONSTANTES ───────────────────────────────────────────────────────────────
 const ADMIN_EMAIL = "admin@mundial2026.com";
 const CLOSING_DATE = new Date("2026-06-09T23:59:59");
 const REVEAL_DATE = new Date("2026-06-10T00:00:00");
 
 const MATCHES = [
   // GRUPO A
-  { id: 1, group: "A", home: "México", away: "Ecuador", date: "11 Jun", time: "15:00" },
-  { id: 2, group: "A", home: "Estados Unidos", away: "Suiza", date: "11 Jun", time: "18:00" },
-  { id: 3, group: "A", home: "México", away: "Suiza", date: "15 Jun", time: "15:00" },
-  { id: 4, group: "A", home: "Ecuador", away: "Estados Unidos", date: "15 Jun", time: "18:00" },
-  { id: 5, group: "A", home: "México", away: "Estados Unidos", date: "19 Jun", time: "18:00" },
-  { id: 6, group: "A", home: "Suiza", away: "Ecuador", date: "19 Jun", time: "18:00" },
+  { id: 1,  group:"A", home:"México",         away:"Sudáfrica",          date:"11 Jun", time:"15:00" },
+  { id: 2,  group:"A", home:"Corea del Sur",  away:"Rep. Checa",         date:"11 Jun", time:"22:00" },
+  { id: 3,  group:"A", home:"Rep. Checa",     away:"Sudáfrica",          date:"18 Jun", time:"12:00" },
+  { id: 4,  group:"A", home:"México",         away:"Corea del Sur",      date:"18 Jun", time:"21:00" },
+  { id: 5,  group:"A", home:"Rep. Checa",     away:"México",             date:"24 Jun", time:"21:00" },
+  { id: 6,  group:"A", home:"Sudáfrica",      away:"Corea del Sur",      date:"24 Jun", time:"21:00" },
   // GRUPO B
-  { id: 7, group: "B", home: "Argentina", away: "Arabia Saudita", date: "12 Jun", time: "12:00" },
-  { id: 8, group: "B", home: "Canadá", away: "Marruecos", date: "12 Jun", time: "15:00" },
-  { id: 9, group: "B", home: "Argentina", away: "Marruecos", date: "16 Jun", time: "15:00" },
-  { id: 10, group: "B", home: "Arabia Saudita", away: "Canadá", date: "16 Jun", time: "18:00" },
-  { id: 11, group: "B", home: "Argentina", away: "Canadá", date: "20 Jun", time: "18:00" },
-  { id: 12, group: "B", home: "Marruecos", away: "Arabia Saudita", date: "20 Jun", time: "18:00" },
+  { id: 7,  group:"B", home:"Canadá",         away:"Bosnia-Herzegovina", date:"12 Jun", time:"15:00" },
+  { id: 8,  group:"B", home:"Qatar",          away:"Suiza",              date:"13 Jun", time:"15:00" },
+  { id: 9,  group:"B", home:"Suiza",          away:"Bosnia-Herzegovina", date:"18 Jun", time:"15:00" },
+  { id: 10, group:"B", home:"Canadá",         away:"Qatar",              date:"18 Jun", time:"18:00" },
+  { id: 11, group:"B", home:"Suiza",          away:"Canadá",             date:"24 Jun", time:"15:00" },
+  { id: 12, group:"B", home:"Bosnia-Herzegovina", away:"Qatar",          date:"24 Jun", time:"15:00" },
   // GRUPO C
-  { id: 13, group: "C", home: "Francia", away: "Japón", date: "12 Jun", time: "09:00" },
-  { id: 14, group: "C", home: "Brasil", away: "Croacia", date: "12 Jun", time: "21:00" },
-  { id: 15, group: "C", home: "Francia", away: "Croacia", date: "16 Jun", time: "09:00" },
-  { id: 16, group: "C", home: "Japón", away: "Brasil", date: "16 Jun", time: "12:00" },
-  { id: 17, group: "C", home: "Francia", away: "Brasil", date: "20 Jun", time: "18:00" },
-  { id: 18, group: "C", home: "Croacia", away: "Japón", date: "20 Jun", time: "18:00" },
+  { id: 13, group:"C", home:"Brasil",         away:"Marruecos",          date:"13 Jun", time:"18:00" },
+  { id: 14, group:"C", home:"Haití",          away:"Escocia",            date:"13 Jun", time:"21:00" },
+  { id: 15, group:"C", home:"Escocia",        away:"Marruecos",          date:"19 Jun", time:"18:00" },
+  { id: 16, group:"C", home:"Brasil",         away:"Haití",              date:"19 Jun", time:"20:30" },
+  { id: 17, group:"C", home:"Escocia",        away:"Brasil",             date:"24 Jun", time:"18:00" },
+  { id: 18, group:"C", home:"Marruecos",      away:"Haití",              date:"24 Jun", time:"18:00" },
   // GRUPO D
-  { id: 19, group: "D", home: "España", away: "Senegal", date: "13 Jun", time: "09:00" },
-  { id: 20, group: "D", home: "Portugal", away: "Costa Rica", date: "13 Jun", time: "12:00" },
-  { id: 21, group: "D", home: "España", away: "Costa Rica", date: "17 Jun", time: "15:00" },
-  { id: 22, group: "D", home: "Senegal", away: "Portugal", date: "17 Jun", time: "18:00" },
-  { id: 23, group: "D", home: "España", away: "Portugal", date: "21 Jun", time: "18:00" },
-  { id: 24, group: "D", home: "Costa Rica", away: "Senegal", date: "21 Jun", time: "18:00" },
+  { id: 19, group:"D", home:"Australia",      away:"Turquía",            date:"14 Jun", time:"00:00" },
+  { id: 20, group:"D", home:"Estados Unidos", away:"Paraguay",           date:"12 Jun", time:"21:00" },
+  { id: 21, group:"D", home:"Estados Unidos", away:"Australia",          date:"19 Jun", time:"15:00" },
+  { id: 22, group:"D", home:"Turquía",        away:"Paraguay",           date:"19 Jun", time:"23:00" },
+  { id: 23, group:"D", home:"Turquía",        away:"Estados Unidos",     date:"25 Jun", time:"18:00" },
+  { id: 24, group:"D", home:"Paraguay",       away:"Australia",          date:"25 Jun", time:"18:00" },
   // GRUPO E
-  { id: 25, group: "E", home: "Alemania", away: "Escocia", date: "13 Jun", time: "15:00" },
-  { id: 26, group: "E", home: "Colombia", away: "Italia", date: "13 Jun", time: "21:00" },
-  { id: 27, group: "E", home: "Alemania", away: "Italia", date: "17 Jun", time: "09:00" },
-  { id: 28, group: "E", home: "Escocia", away: "Colombia", date: "17 Jun", time: "12:00" },
-  { id: 29, group: "E", home: "Alemania", away: "Colombia", date: "21 Jun", time: "18:00" },
-  { id: 30, group: "E", home: "Italia", away: "Escocia", date: "21 Jun", time: "18:00" },
+  { id: 25, group:"E", home:"Alemania",       away:"Curasao",            date:"14 Jun", time:"13:00" },
+  { id: 26, group:"E", home:"Costa de Marfil",away:"Ecuador",            date:"14 Jun", time:"19:00" },
+  { id: 27, group:"E", home:"Alemania",       away:"Costa de Marfil",    date:"20 Jun", time:"16:00" },
+  { id: 28, group:"E", home:"Ecuador",        away:"Curasao",            date:"20 Jun", time:"20:00" },
+  { id: 29, group:"E", home:"Curasao",        away:"Costa de Marfil",    date:"25 Jun", time:"16:00" },
+  { id: 30, group:"E", home:"Ecuador",        away:"Alemania",           date:"25 Jun", time:"16:00" },
   // GRUPO F
-  { id: 31, group: "F", home: "Inglaterra", away: "Serbia", date: "14 Jun", time: "12:00" },
-  { id: 32, group: "F", home: "Países Bajos", away: "Irán", date: "14 Jun", time: "15:00" },
-  { id: 33, group: "F", home: "Inglaterra", away: "Irán", date: "18 Jun", time: "12:00" },
-  { id: 34, group: "F", home: "Serbia", away: "Países Bajos", date: "18 Jun", time: "15:00" },
-  { id: 35, group: "F", home: "Inglaterra", away: "Países Bajos", date: "22 Jun", time: "18:00" },
-  { id: 36, group: "F", home: "Irán", away: "Serbia", date: "22 Jun", time: "18:00" },
+  { id: 31, group:"F", home:"Países Bajos",   away:"Japón",              date:"14 Jun", time:"16:00" },
+  { id: 32, group:"F", home:"Suecia",         away:"Túnez",              date:"14 Jun", time:"22:00" },
+  { id: 33, group:"F", home:"Países Bajos",   away:"Suecia",             date:"20 Jun", time:"13:00" },
+  { id: 34, group:"F", home:"Túnez",          away:"Japón",              date:"21 Jun", time:"00:00" },
+  { id: 35, group:"F", home:"Japón",          away:"Suecia",             date:"25 Jun", time:"19:00" },
+  { id: 36, group:"F", home:"Túnez",          away:"Países Bajos",       date:"25 Jun", time:"19:00" },
   // GRUPO G
-  { id: 37, group: "G", home: "Uruguay", away: "Corea del Sur", date: "14 Jun", time: "09:00" },
-  { id: 38, group: "G", home: "Chile", away: "Camerún", date: "14 Jun", time: "21:00" },
-  { id: 39, group: "G", home: "Uruguay", away: "Camerún", date: "18 Jun", time: "09:00" },
-  { id: 40, group: "G", home: "Corea del Sur", away: "Chile", date: "18 Jun", time: "18:00" },
-  { id: 41, group: "G", home: "Uruguay", away: "Chile", date: "22 Jun", time: "18:00" },
-  { id: 42, group: "G", home: "Camerún", away: "Corea del Sur", date: "22 Jun", time: "18:00" },
+  { id: 37, group:"G", home:"Bélgica",        away:"Egipto",             date:"15 Jun", time:"15:00" },
+  { id: 38, group:"G", home:"Irán",           away:"Nueva Zelanda",      date:"15 Jun", time:"21:00" },
+  { id: 39, group:"G", home:"Bélgica",        away:"Irán",               date:"21 Jun", time:"15:00" },
+  { id: 40, group:"G", home:"Nueva Zelanda",  away:"Egipto",             date:"21 Jun", time:"21:00" },
+  { id: 41, group:"G", home:"Bélgica",        away:"Nueva Zelanda",      date:"26 Jun", time:"18:00" },
+  { id: 42, group:"G", home:"Egipto",         away:"Irán",               date:"26 Jun", time:"18:00" },
   // GRUPO H
-  { id: 43, group: "H", home: "Países Bajos", away: "Senegal", date: "15 Jun", time: "09:00" },
-  { id: 44, group: "H", home: "Ecuador", away: "Arabia Saudita", date: "15 Jun", time: "12:00" },
-  { id: 45, group: "H", home: "Países Bajos", away: "Arabia Saudita", date: "19 Jun", time: "15:00" },
-  { id: 46, group: "H", home: "Senegal", away: "Ecuador", date: "19 Jun", time: "12:00" },
-  { id: 47, group: "H", home: "Senegal", away: "Arabia Saudita", date: "23 Jun", time: "18:00" },
-  { id: 48, group: "H", home: "Países Bajos", away: "Ecuador", date: "23 Jun", time: "18:00" },
+  { id: 43, group:"H", home:"España",         away:"Cabo Verde",         date:"15 Jun", time:"12:00" },
+  { id: 44, group:"H", home:"Arabia Saudí",   away:"Uruguay",            date:"15 Jun", time:"18:00" },
+  { id: 45, group:"H", home:"España",         away:"Arabia Saudí",       date:"21 Jun", time:"12:00" },
+  { id: 46, group:"H", home:"Uruguay",        away:"Cabo Verde",         date:"21 Jun", time:"18:00" },
+  { id: 47, group:"H", home:"Uruguay",        away:"España",             date:"26 Jun", time:"18:00" },
+  { id: 48, group:"H", home:"Cabo Verde",     away:"Arabia Saudí",       date:"26 Jun", time:"18:00" },
   // GRUPO I
-  { id: 49, group: "I", home: "Australia", away: "Argelia", date: "15 Jun", time: "15:00" },
-  { id: 50, group: "I", home: "Nigeria", away: "Dinamarca", date: "15 Jun", time: "21:00" },
-  { id: 51, group: "I", home: "Australia", away: "Dinamarca", date: "19 Jun", time: "09:00" },
-  { id: 52, group: "I", home: "Argelia", away: "Nigeria", date: "19 Jun", time: "21:00" },
-  { id: 53, group: "I", home: "Australia", away: "Nigeria", date: "23 Jun", time: "18:00" },
-  { id: 54, group: "I", home: "Dinamarca", away: "Argelia", date: "23 Jun", time: "18:00" },
+  { id: 49, group:"I", home:"Francia",        away:"Senegal",            date:"16 Jun", time:"15:00" },
+  { id: 50, group:"I", home:"Irak",           away:"Noruega",            date:"16 Jun", time:"18:00" },
+  { id: 51, group:"I", home:"Francia",        away:"Irak",               date:"22 Jun", time:"17:00" },
+  { id: 52, group:"I", home:"Noruega",        away:"Senegal",            date:"22 Jun", time:"20:00" },
+  { id: 53, group:"I", home:"Noruega",        away:"Francia",            date:"26 Jun", time:"15:00" },
+  { id: 54, group:"I", home:"Senegal",        away:"Irak",               date:"26 Jun", time:"15:00" },
   // GRUPO J
-  { id: 55, group: "J", home: "Turquía", away: "Bélgica", date: "16 Jun", time: "09:00" },
-  { id: 56, group: "J", home: "México", away: "Camerún", date: "16 Jun", time: "12:00" },
-  { id: 57, group: "J", home: "Turquía", away: "Camerún", date: "20 Jun", time: "09:00" },
-  { id: 58, group: "J", home: "Bélgica", away: "México", date: "20 Jun", time: "12:00" },
-  { id: 59, group: "J", home: "Turquía", away: "México", date: "24 Jun", time: "18:00" },
-  { id: 60, group: "J", home: "Camerún", away: "Bélgica", date: "24 Jun", time: "18:00" },
+  { id: 55, group:"J", home:"Argentina",      away:"Argelia",            date:"16 Jun", time:"21:00" },
+  { id: 56, group:"J", home:"Austria",        away:"Jordania",           date:"17 Jun", time:"00:00" },
+  { id: 57, group:"J", home:"Argentina",      away:"Austria",            date:"22 Jun", time:"13:00" },
+  { id: 58, group:"J", home:"Jordania",       away:"Argelia",            date:"22 Jun", time:"23:00" },
+  { id: 59, group:"J", home:"Argentina",      away:"Jordania",           date:"26 Jun", time:"21:00" },
+  { id: 60, group:"J", home:"Argelia",        away:"Austria",            date:"26 Jun", time:"21:00" },
   // GRUPO K
-  { id: 61, group: "K", home: "Polonia", away: "Perú", date: "16 Jun", time: "21:00" },
-  { id: 62, group: "K", home: "Costa de Marfil", away: "Suecia", date: "17 Jun", time: "09:00" },
-  { id: 63, group: "K", home: "Polonia", away: "Suecia", date: "21 Jun", time: "09:00" },
-  { id: 64, group: "K", home: "Perú", away: "Costa de Marfil", date: "21 Jun", time: "12:00" },
-  { id: 65, group: "K", home: "Polonia", away: "Costa de Marfil", date: "25 Jun", time: "18:00" },
-  { id: 66, group: "K", home: "Suecia", away: "Perú", date: "25 Jun", time: "18:00" },
+  { id: 61, group:"K", home:"Portugal",       away:"RD Congo",           date:"17 Jun", time:"13:00" },
+  { id: 62, group:"K", home:"Uzbekistán",     away:"Colombia",           date:"17 Jun", time:"22:00" },
+  { id: 63, group:"K", home:"Portugal",       away:"Uzbekistán",         date:"23 Jun", time:"13:00" },
+  { id: 64, group:"K", home:"Colombia",       away:"RD Congo",           date:"23 Jun", time:"22:00" },
+  { id: 65, group:"K", home:"Colombia",       away:"Portugal",           date:"27 Jun", time:"19:30" },
+  { id: 66, group:"K", home:"RD Congo",       away:"Uzbekistán",         date:"27 Jun", time:"19:30" },
   // GRUPO L
-  { id: 67, group: "L", home: "Egipto", away: "Nueva Zelanda", date: "17 Jun", time: "12:00" },
-  { id: 68, group: "L", home: "Qatar", away: "Sudáfrica", date: "17 Jun", time: "21:00" },
-  { id: 69, group: "L", home: "Egipto", away: "Sudáfrica", date: "21 Jun", time: "15:00" },
-  { id: 70, group: "L", home: "Nueva Zelanda", away: "Qatar", date: "21 Jun", time: "21:00" },
-  { id: 71, group: "L", home: "Egipto", away: "Qatar", date: "25 Jun", time: "18:00" },
-  { id: 72, group: "L", home: "Sudáfrica", away: "Nueva Zelanda", date: "25 Jun", time: "18:00" },
+  { id: 67, group:"L", home:"Inglaterra",     away:"Croacia",            date:"17 Jun", time:"16:00" },
+  { id: 68, group:"L", home:"Ghana",          away:"Panamá",             date:"17 Jun", time:"19:00" },
+  { id: 69, group:"L", home:"Inglaterra",     away:"Ghana",              date:"23 Jun", time:"16:00" },
+  { id: 70, group:"L", home:"Panamá",         away:"Croacia",            date:"23 Jun", time:"19:00" },
+  { id: 71, group:"L", home:"Panamá",         away:"Inglaterra",         date:"27 Jun", time:"17:00" },
+  { id: 72, group:"L", home:"Croacia",        away:"Ghana",              date:"27 Jun", time:"17:00" },
 ];
 
 const FLAGS = {
-  "México": "🇲🇽", "Ecuador": "🇪🇨", "Estados Unidos": "🇺🇸", "Suiza": "🇨🇭",
-  "Argentina": "🇦🇷", "Arabia Saudita": "🇸🇦", "Canadá": "🇨🇦", "Marruecos": "🇲🇦",
-  "Francia": "🇫🇷", "Japón": "🇯🇵", "Brasil": "🇧🇷", "Croacia": "🇭🇷",
-  "España": "🇪🇸", "Senegal": "🇸🇳", "Portugal": "🇵🇹", "Costa Rica": "🇨🇷",
-  "Alemania": "🇩🇪", "Escocia": "🏴󠁧󠁢󠁳󠁣󠁴󠁿", "Colombia": "🇨🇴", "Italia": "🇮🇹",
-  "Inglaterra": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "Serbia": "🇷🇸", "Países Bajos": "🇳🇱", "Irán": "🇮🇷",
-  "Uruguay": "🇺🇾", "Corea del Sur": "🇰🇷", "Chile": "🇨🇱", "Camerún": "🇨🇲",
-  "Australia": "🇦🇺", "Argelia": "🇩🇿", "Nigeria": "🇳🇬", "Dinamarca": "🇩🇰",
-  "Turquía": "🇹🇷", "Bélgica": "🇧🇪", "Polonia": "🇵🇱", "Perú": "🇵🇪",
-  "Costa de Marfil": "🇨🇮", "Suecia": "🇸🇪", "Egipto": "🇪🇬",
-  "Nueva Zelanda": "🇳🇿", "Qatar": "🇶🇦", "Sudáfrica": "🇿🇦",
+  "México":"🇲🇽","Sudáfrica":"🇿🇦","Corea del Sur":"🇰🇷","Rep. Checa":"🇨🇿",
+  "Canadá":"🇨🇦","Bosnia-Herzegovina":"🇧🇦","Qatar":"🇶🇦","Suiza":"🇨🇭",
+  "Brasil":"🇧🇷","Marruecos":"🇲🇦","Haití":"🇭🇹","Escocia":"🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+  "Australia":"🇦🇺","Turquía":"🇹🇷","Estados Unidos":"🇺🇸","Paraguay":"🇵🇾",
+  "Alemania":"🇩🇪","Curasao":"🇨🇼","Costa de Marfil":"🇨🇮","Ecuador":"🇪🇨",
+  "Países Bajos":"🇳🇱","Japón":"🇯🇵","Suecia":"🇸🇪","Túnez":"🇹🇳",
+  "Bélgica":"🇧🇪","Egipto":"🇪🇬","Irán":"🇮🇷","Nueva Zelanda":"🇳🇿",
+  "España":"🇪🇸","Cabo Verde":"🇨🇻","Arabia Saudí":"🇸🇦","Uruguay":"🇺🇾",
+  "Francia":"🇫🇷","Senegal":"🇸🇳","Irak":"🇮🇶","Noruega":"🇳🇴",
+  "Argentina":"🇦🇷","Argelia":"🇩🇿","Austria":"🇦🇹","Jordania":"🇯🇴",
+  "Portugal":"🇵🇹","RD Congo":"🇨🇩","Uzbekistán":"🇺🇿","Colombia":"🇨🇴",
+  "Inglaterra":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","Croacia":"🇭🇷","Ghana":"🇬🇭","Panamá":"🇵🇦",
 };
 
 const f = (t) => FLAGS[t] || "🏳️";
 const GROUPS = ["A","B","C","D","E","F","G","H","I","J","K","L"];
 
-// ─── APP PRINCIPAL ─────────────────────────────────────────────────────────────
 export default function App() {
   const [view, setView] = useState("landing");
   const [user, setUser] = useState(null);
@@ -140,7 +139,6 @@ export default function App() {
   const isClosed = now >= CLOSING_DATE;
   const isRevealed = now >= REVEAL_DATE;
 
-  // ── Cargar datos en tiempo real ──
   useEffect(() => {
     const unsubResults = onSnapshot(collection(db, "results"), snap => {
       const data = {};
@@ -155,7 +153,6 @@ export default function App() {
     return () => { unsubResults(); unsubParts(); };
   }, []);
 
-  // ── Cargar predicciones del usuario ──
   useEffect(() => {
     if (!user) return;
     const unsubPreds = onSnapshot(collection(db, "predictions"), snap => {
@@ -175,7 +172,6 @@ export default function App() {
     return () => unsubPreds();
   }, [user]);
 
-  // ── Calcular tabla ──
   useEffect(() => {
     const board = Object.entries(participants).map(([uid, data]) => {
       let g = 0, p = 0;
@@ -193,7 +189,6 @@ export default function App() {
     setLeaderboard(board);
   }, [participants, results, allPredictions]);
 
-  // ── Login ──
   const handleLogin = async () => {
     setLoginError("");
     try {
@@ -213,7 +208,6 @@ export default function App() {
     setView("landing");
   };
 
-  // ── Predecir ──
   const submitPrediction = async (matchId, pick) => {
     if (isClosed || !user) return;
     const result = results[matchId]?.result;
@@ -226,7 +220,6 @@ export default function App() {
     setSaving(false);
   };
 
-  // ── Admin: agregar participante ──
   const addParticipant = async () => {
     if (!newName.trim() || newPass.length < 6) {
       setAddMsg("Nombre y contraseña de mínimo 6 caracteres"); return;
@@ -244,19 +237,15 @@ export default function App() {
     }
   };
 
-  // ── Admin: ingresar resultado ──
   const setResult = async (matchId, result) => {
     const existing = results[matchId]?.result;
-    if (existing) return; // No permite corrección
+    if (existing) return;
     await setDoc(doc(db, "results", String(matchId)), { result, matchId, timestamp: new Date() });
   };
 
-  // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
     <div className="app">
       <div className="bg-stadium" />
-
-      {/* HEADER */}
       <header className="header">
         <div className="header-inner">
           <div className="logo" onClick={() => setView("landing")}>
@@ -277,8 +266,6 @@ export default function App() {
       </header>
 
       <main className="main">
-
-        {/* ── LANDING ── */}
         {view === "landing" && (
           <div className="landing">
             <div className="hero-eyebrow">FIFA WORLD CUP 2026™ · USA · CANADA · MEXICO</div>
@@ -300,7 +287,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ── LOGIN ── */}
         {view === "login" && (
           <div className="card">
             <h2 className="card-title">🔐 Ingresar</h2>
@@ -322,7 +308,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ── TABLA ── */}
         {view === "tabla" && (
           <div className="full">
             <h2 className="section-title">🥇 Tabla General</h2>
@@ -336,8 +321,8 @@ export default function App() {
               </div>
               {leaderboard.length === 0 && <div className="empty">Aún no hay participantes.</div>}
               {leaderboard.map((p, i) => (
-                <div key={p.uid} className={`tabla-row ${i === 0 ? "gold" : i === 1 ? "silver" : i === 2 ? "bronze" : ""}`}>
-                  <span className="td-pos">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}</span>
+                <div key={p.uid} className={`tabla-row ${i===0?"gold":i===1?"silver":i===2?"bronze":""}`}>
+                  <span className="td-pos">{i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`}</span>
                   <span className="td-name">{p.name}</span>
                   <span className="td-stat">{p.g}</span>
                   <span className="td-stat">{p.p}</span>
@@ -345,11 +330,10 @@ export default function App() {
                 </div>
               ))}
             </div>
-
-            <h3 className="section-title" style={{ marginTop: 40 }}>📋 Resultados</h3>
+            <h3 className="section-title" style={{marginTop:40}}>📋 Resultados</h3>
             <div className="group-tabs">
               {GROUPS.map(g => (
-                <button key={g} className={`g-tab ${activeGroup === g ? "active" : ""}`} onClick={() => setActiveGroup(g)}>Grupo {g}</button>
+                <button key={g} className={`g-tab ${activeGroup===g?"active":""}`} onClick={() => setActiveGroup(g)}>Grupo {g}</button>
               ))}
             </div>
             <div className="match-list">
@@ -364,11 +348,7 @@ export default function App() {
                     <div className="match-teams">
                       <div className="team-l"><span className="mflag">{f(m.home)}</span><span className="mname">{m.home}</span></div>
                       <div className="match-center">
-                        {res ? (
-                          <span className="result-pill">
-                            {res === "home" ? `Gana ${m.home}` : res === "away" ? `Gana ${m.away}` : "Empate"}
-                          </span>
-                        ) : <span className="vs">VS</span>}
+                        {res ? <span className="result-pill">{res==="home"?`Gana ${m.home}`:res==="away"?`Gana ${m.away}`:"Empate"}</span> : <span className="vs">VS</span>}
                       </div>
                       <div className="team-r"><span className="mname">{m.away}</span><span className="mflag">{f(m.away)}</span></div>
                     </div>
@@ -379,19 +359,16 @@ export default function App() {
           </div>
         )}
 
-        {/* ── PREDICT ── */}
         {view === "predict" && user && !isAdmin && (
           <div className="full">
             <div className="predict-header">
               <h2 className="section-title">⚽ Tus Predicciones</h2>
-              {isClosed
-                ? <div className="closed-banner">🔒 Apuestas cerradas — 9 de junio 2026</div>
-                : <div className="open-banner">✅ Abierto hasta el 9 de junio 2026</div>
-              }
+              {isClosed ? <div className="closed-banner">🔒 Apuestas cerradas — 9 de junio 2026</div>
+                        : <div className="open-banner">✅ Abierto hasta el 9 de junio 2026</div>}
             </div>
             <div className="group-tabs">
               {GROUPS.map(g => (
-                <button key={g} className={`g-tab ${activeGroup === g ? "active" : ""}`} onClick={() => setActiveGroup(g)}>Grupo {g}</button>
+                <button key={g} className={`g-tab ${activeGroup===g?"active":""}`} onClick={() => setActiveGroup(g)}>Grupo {g}</button>
               ))}
             </div>
             <div className="match-list">
@@ -402,7 +379,7 @@ export default function App() {
                 const correct = res && pred === res;
                 const wrong = res && pred && pred !== res;
                 return (
-                  <div key={m.id} className={`match-card ${correct ? "correct" : wrong ? "wrong" : ""}`}>
+                  <div key={m.id} className={`match-card ${correct?"correct":wrong?"wrong":""}`}>
                     <div className="match-top">
                       <span className="match-date">{m.date} · {m.time}</span>
                       <div className="badges">
@@ -420,75 +397,62 @@ export default function App() {
                     {!locked ? (
                       <div className="pick-row">
                         {[
-                          { val: "home", label: `✓ ${m.home}` },
-                          { val: "draw", label: "= Empate" },
-                          { val: "away", label: `✓ ${m.away}` },
+                          {val:"home", label:`✓ ${m.home}`},
+                          {val:"draw", label:"= Empate"},
+                          {val:"away", label:`✓ ${m.away}`},
                         ].map(opt => (
                           <button key={opt.val}
-                            className={`pick-btn ${pred === opt.val ? "active" : ""}`}
+                            className={`pick-btn ${pred===opt.val?"active":""}`}
                             onClick={() => submitPrediction(m.id, opt.val)}
-                            disabled={saving}>
-                            {opt.label}
-                          </button>
+                            disabled={saving}>{opt.label}</button>
                         ))}
                       </div>
                     ) : (
                       <div className="locked-pick">
-                        {pred
-                          ? <>Tu pick: <strong>{pred === "home" ? `Gana ${m.home}` : pred === "away" ? `Gana ${m.away}` : "Empate"}</strong></>
-                          : <span className="no-pick">No registraste pick para este partido</span>
-                        }
-                        {res && <span className="result-note"> · Resultado: {res === "home" ? `Gana ${m.home}` : res === "away" ? `Gana ${m.away}` : "Empate"}</span>}
+                        {pred ? <>Tu pick: <strong>{pred==="home"?`Gana ${m.home}`:pred==="away"?`Gana ${m.away}`:"Empate"}</strong></> : <span className="no-pick">No registraste pick</span>}
+                        {res && <span className="result-note"> · Resultado: {res==="home"?`Gana ${m.home}`:res==="away"?`Gana ${m.away}`:"Empate"}</span>}
                       </div>
                     )}
                   </div>
                 );
               })}
             </div>
-
-            {/* Ver picks de otros — solo desde el 10 de junio */}
             {isRevealed && (
-              <div style={{ marginTop: 40 }}>
+              <div style={{marginTop:40}}>
                 <h3 className="section-title">👀 Picks de todos (visible desde 10 Jun)</h3>
-                {/* Aquí se pueden agregar picks comparativos */}
               </div>
             )}
           </div>
         )}
 
-        {/* ── ADMIN ── */}
         {view === "admin" && isAdmin && (
           <div className="full">
             <h2 className="section-title">⚙️ Panel de Administración</h2>
-
-            {/* Agregar participante */}
             <div className="admin-section">
               <h3 className="admin-section-title">👥 Registrar participante</h3>
-              <p className="admin-note">El email se genera automáticamente como <em>nombre@mundial2026.com</em></p>
+              <p className="admin-note">El email se genera como <em>nombre@mundial2026.com</em> — solo registra participantes que hayan pagado.</p>
               <div className="admin-row">
                 <input className="input" placeholder="Nombre (ej: Hugo Cuéllar 1)" value={newName} onChange={e => setNewName(e.target.value)} />
                 <input className="input" placeholder="Contraseña (mín. 6 caracteres)" type="text" value={newPass} onChange={e => setNewPass(e.target.value)} />
                 <button className="btn-primary" onClick={addParticipant}>Agregar</button>
               </div>
-              {addMsg && <div className={addMsg.startsWith("✓") ? "success" : "error"}>{addMsg}</div>}
+              {addMsg && <div className={addMsg.startsWith("✓")?"success":"error"}>{addMsg}</div>}
               <div className="part-list">
                 {Object.entries(participants).map(([uid, data]) => (
                   <div key={uid} className="part-row">
                     <span className="part-name">{data.name}</span>
                     <span className="part-email">{data.email}</span>
-                    <span className="part-pts">{leaderboard.find(l => l.uid === uid)?.pts || 0} pts</span>
+                    <span className="part-pts">{leaderboard.find(l=>l.uid===uid)?.pts||0} pts</span>
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Ingresar resultados */}
             <div className="admin-section">
               <h3 className="admin-section-title">⚽ Ingresar resultados</h3>
-              <p className="admin-note" style={{ color: "#ef4444" }}>⚠️ Una vez guardado el resultado NO se puede corregir.</p>
+              <p className="admin-note" style={{color:"#ef4444"}}>⚠️ Una vez guardado el resultado NO se puede corregir.</p>
               <div className="group-tabs">
                 {GROUPS.map(g => (
-                  <button key={g} className={`g-tab ${activeGroup === g ? "active" : ""}`} onClick={() => setActiveGroup(g)}>Grupo {g}</button>
+                  <button key={g} className={`g-tab ${activeGroup===g?"active":""}`} onClick={() => setActiveGroup(g)}>Grupo {g}</button>
                 ))}
               </div>
               <div className="match-list">
@@ -509,19 +473,19 @@ export default function App() {
                         <div className="pick-row">
                           <span className="result-label">Resultado:</span>
                           {[
-                            { val: "home", label: `Gana ${m.home}` },
-                            { val: "draw", label: "Empate" },
-                            { val: "away", label: `Gana ${m.away}` },
+                            {val:"home", label:`Gana ${m.home}`},
+                            {val:"draw", label:"Empate"},
+                            {val:"away", label:`Gana ${m.away}`},
                           ].map(opt => (
                             <button key={opt.val} className="pick-btn"
-                              onClick={() => { if (window.confirm(`¿Confirmas: ${opt.label} en ${m.home} vs ${m.away}? NO se podrá cambiar.`)) setResult(m.id, opt.val); }}>
+                              onClick={() => { if(window.confirm(`¿Confirmas: ${opt.label}? NO se podrá cambiar.`)) setResult(m.id, opt.val); }}>
                               {opt.label}
                             </button>
                           ))}
                         </div>
                       ) : (
                         <div className="locked-pick">
-                          Resultado final: <strong>{res === "home" ? `Gana ${m.home}` : res === "away" ? `Gana ${m.away}` : "Empate"}</strong>
+                          Resultado final: <strong>{res==="home"?`Gana ${m.home}`:res==="away"?`Gana ${m.away}`:"Empate"}</strong>
                         </div>
                       )}
                     </div>
